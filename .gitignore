@@ -1,0 +1,15 @@
+*.bak
+*.log
+*.tmp
+*.rptdesign
+*.wsdl
+*.xltm
+*.xls
+
+T2S_Example/data/xls_report/Reporting_mp_archive_groups.dpl
+T2S_Example/data/xls_report/Report.cmd
+T2S_Example/data/xls_report/Report.mdb
+T2S_Example/data/Reporting/Templates/InformationServer/WinCC_OA_LineChart.rdl
+T2S_Example/data/Reporting/Templates/InformationServer/WinCC_OA_AlarmTable.rdl
+T2S_Example/data/Reporting/Templates/BIRT/localization.properties
+T2S_Example/data/Reporting/Templates/BIRT/localization_de_AT.properties
