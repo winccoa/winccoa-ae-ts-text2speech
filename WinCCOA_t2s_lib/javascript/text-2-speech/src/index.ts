@@ -14,6 +14,8 @@ function connectCB(
   if (error) {
     console.log(error);
     return;
+
+    
   }
 
   if (type == WinccoaConnectUpdateType.Answer)
