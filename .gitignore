@@ -26,3 +26,5 @@ xls_report/
 *.lock
 
 dbase.touch
+dbase.status
+event.status
