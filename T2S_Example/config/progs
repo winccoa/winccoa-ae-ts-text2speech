@@ -10,4 +10,4 @@ WCCILproxy       | always |      30 |        2 |        2 |
 WCCOActrl        | always |      30 |        3 |        1 |-num 1 -f pvss_scripts.lst
 WCCILsim         | always |      30 |        3 |        1 |
 WCCOAui          |   once |      30 |        3 |        1 |-m gedi
-node             | manual |      30 |        2 |        2 |text-2-speech/src/index.js
+node             | always |      30 |        2 |        2 |text-2-speech/dist/index.js
