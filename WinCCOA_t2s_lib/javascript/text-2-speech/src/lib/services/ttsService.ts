@@ -4,6 +4,7 @@ interface QueuedAnnouncement {
   text: string;
   voice?: string;
   speed?: number;
+  volume?: number;
   resolve: () => void;
   reject: (error: Error) => void;
 }
@@ -11,6 +12,8 @@ interface QueuedAnnouncement {
 export class TTSService {
   private defaultVoice: string | undefined;
   private defaultSpeed: number = 1.0;
+  private defaultVolume: number = 100; // Keep for future use
+  private maxQueueSize: number = 5;
   private isSpeaking = false;
   private queue: QueuedAnnouncement[] = [];
   
@@ -19,12 +22,19 @@ export class TTSService {
     if (defaultSpeed) this.defaultSpeed = defaultSpeed;
   }
   
-  async speak(text: string, voice?: string, speed?: number): Promise<void> {
+  async speak(text: string, voice?: string, speed?: number, volume?: number): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Check queue size before adding
+      if (this.queue.length >= this.maxQueueSize) {
+        reject(new Error('TTS queue is full'));
+        return;
+      }
+      
       const announcement: QueuedAnnouncement = {
         text,
         voice,
         speed,
+        volume,
         resolve,
         reject
       };
@@ -50,9 +60,11 @@ export class TTSService {
     this.isSpeaking = true;
     const voiceToUse = announcement.voice || this.defaultVoice;
     const speedToUse = announcement.speed || this.defaultSpeed;
+    const volumeToUse = announcement.volume || this.defaultVolume;
 
-    console.log(`Speaking: "${announcement.text}" with voice: ${voiceToUse}, speed: ${speedToUse} (Queue remaining: ${this.queue.length})`);
+    console.log(`Speaking: "${announcement.text}" with voice: ${voiceToUse}, speed: ${speedToUse}, volume: ${volumeToUse} (volume not supported by say library)`);
     
+    // Note: say library doesn't support volume, so we only use voice and speed
     say.speak(announcement.text, voiceToUse, speedToUse, (err?: string) => {
       this.isSpeaking = false;
       if (err) {
@@ -63,8 +75,7 @@ export class TTSService {
         announcement.resolve();
       }
       
-      // Process next item in queue
-      setTimeout(() => this.processQueue(), 100); // Small delay between announcements
+      setTimeout(() => this.processQueue(), 100);
     });
   }
   
@@ -103,6 +114,15 @@ export class TTSService {
 
   setDefaultSpeed(speed: number): void {
     this.defaultSpeed = speed;
+  }
+
+  setDefaultVolume(volume: number): void {
+    this.defaultVolume = volume;
+    console.log(`Volume set to ${volume}% (note: not supported by say library)`);
+  }
+
+  setMaxQueueSize(size: number): void {
+    this.maxQueueSize = size;
   }
 
   isSpeechActive(): boolean {
