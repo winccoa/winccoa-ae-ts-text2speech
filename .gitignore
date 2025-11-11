@@ -15,6 +15,7 @@ Reporting/
 sounds/
 TIA_Projects/
 xls_report/
+.github/
 
 *.sqlite-*
 *.bak
