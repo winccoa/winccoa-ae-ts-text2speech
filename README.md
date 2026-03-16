@@ -4,6 +4,8 @@ Enhance your WinCC OA system with real-time voice notifications. The Text-to-Spe
 
 Instead of relying solely on visual alarms or logs, operators receive clear audible notifications. This ensures that critical information is not overlooked—even when attention is focused on other tasks.
 
+![pic1](https://github.com/winccoa/winccoa-ae-ts-text2speech/blob/d0096ec64a5a0bcbfc6ed95154c2c1ae7dfee5e4/pics/img1.png)
+
 ## Overview
 
 The Text-to-Speech Application Example for WinCC OA integrates speech synthesis directly into your SCADA environment.
@@ -11,6 +13,8 @@ The Text-to-Speech Application Example for WinCC OA integrates speech synthesis 
 It allows the system to automatically convert text messages into audio output, enabling voice alerts for alarms, warnings, status updates, or any custom event generated within the WinCC OA project.
 
 This improves operator awareness and reduces reaction time in mission-critical situations.
+
+![pic2](https://github.com/winccoa/winccoa-ae-ts-text2speech/blob/d0096ec64a5a0bcbfc6ed95154c2c1ae7dfee5e4/pics/Img2.png)
 
 ## Key Features
 
@@ -46,24 +50,3 @@ For detailed instructions on usage and integration, please refer to the datashee
 The WinCC OA Text-to-Speech Application Example enhances traditional SCADA monitoring with audible intelligence. By transforming system messages into spoken alerts, operators gain a new layer of awareness that improves response time, safety, and usability.
 
 Whether used for alarms, system notifications, or operator guidance, the TTS Application Example provides a simple yet powerful extension to the WinCC OA platform.
-
-## Downloads
-
-### WinCC OA Documentation
-
-- Attachment to Manual
-
-### Example Project
-
-- Subproject and preconfigured project for testing with WinCC OA
-- Attachment to Project
-
-### GitHub - WinCC OA
-
-The latest version of the source code is available on GitHub.  
-`[Insert GitHub link here, if available]`
-
-## Keywords
-
-WinCC OA, Text-to-Speech, SCADA Voice Alerts, Industrial Automation, Alarm Announcements, Audible Notifications, Control Room Systems, Event-Driven Speech, Operator Awareness.
-
