@@ -16,6 +16,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "say": "^0.16.0"
+    "say": "^0.16.0",
+    "heap-js": "^2.7.1"
   }
 }

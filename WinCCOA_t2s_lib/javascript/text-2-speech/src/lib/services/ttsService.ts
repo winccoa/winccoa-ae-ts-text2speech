@@ -1,100 +1,97 @@
+import { Heap } from 'heap-js';
 const say = require('say')
 
-interface QueuedAnnouncement {
+export interface Message {
+  managerNumber?: number;
+  dpe?: string;
   text: string;
   voice?: string;
   speed?: number;
-  volume?: number;
-  resolve: () => void;
-  reject: (error: Error) => void;
+  priority: number;
 }
 
 export class TTSService {
   private defaultVoice: string | undefined;
   private defaultSpeed: number = 1.0;
-  private defaultVolume: number = 100; // Keep for future use
   private maxQueueSize: number = 5;
   private isSpeaking = false;
-  private queue: QueuedAnnouncement[] = [];
-  
+  private queue: Heap<Message> = new Heap<Message>((a: Message, b: Message) => b.priority - a.priority);
+
   constructor(defaultVoice?: string, defaultSpeed?: number) {
     this.defaultVoice = defaultVoice;
     if (defaultSpeed) this.defaultSpeed = defaultSpeed;
   }
-  
-  async speak(text: string, voice?: string, speed?: number, volume?: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Check queue size before adding
-      if (this.queue.length >= this.maxQueueSize) {
-        reject(new Error('TTS queue is full'));
+
+  add(announcement: Message): void {
+    // Check if queue is at max capacity
+    if (this.queue.size() >= this.maxQueueSize) {
+      // Get the lowest priority message in the queue
+      const queueArray = this.queue.toArray();
+      const lowestPriorityMsg = queueArray.reduce((lowest, current) => 
+        current.priority < lowest.priority ? current : lowest
+      );
+
+      // Only add if new message has higher priority than lowest in queue
+      if (announcement.priority > lowestPriorityMsg.priority) {
+        // Remove the lowest priority message
+        const newQueue = new Heap<Message>((a: Message, b: Message) => b.priority - a.priority);
+        queueArray.forEach(msg => {
+          if (msg !== lowestPriorityMsg) {
+            newQueue.push(msg);
+          }
+        });
+        this.queue = newQueue;
+        this.queue.push(announcement);
+        console.log(`Queue full: Replaced priority ${lowestPriorityMsg.priority} message with priority ${announcement.priority} message`);
+      } else {
+        console.log(`Queue full: Dropped priority ${announcement.priority} message (queue lowest: ${lowestPriorityMsg.priority})`);
         return;
       }
-      
-      const announcement: QueuedAnnouncement = {
-        text,
-        voice,
-        speed,
-        volume,
-        resolve,
-        reject
-      };
-      
+    } else {
       this.queue.push(announcement);
-      console.log(`Added to queue: "${text}" (Queue length: ${this.queue.length})`);
-      
-      // Start processing if not already speaking
-      if (!this.isSpeaking) {
-        this.processQueue();
-      }
-    });
-  }
-  
-  private processQueue(): void {
-    if (this.queue.length === 0 || this.isSpeaking) {
-      return;
     }
     
-    const announcement = this.queue.shift();
+    this.processQueue();
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.queue.size() === 0 || this.isSpeaking) {
+      return;
+    }
+
+    const announcement = this.queue.pop();
     if (!announcement) return;
-    
+
     this.isSpeaking = true;
+
     const voiceToUse = announcement.voice || this.defaultVoice;
     const speedToUse = announcement.speed || this.defaultSpeed;
-    const volumeToUse = announcement.volume || this.defaultVolume;
 
-    console.log(`Speaking: "${announcement.text}" with voice: ${voiceToUse}, speed: ${speedToUse}, volume: ${volumeToUse} (volume not supported by say library)`);
-    
-    // Note: say library doesn't support volume, so we only use voice and speed
-    say.speak(announcement.text, voiceToUse, speedToUse, (err?: string) => {
-      this.isSpeaking = false;
-      if (err) {
-        console.error('TTS Error:', err);
-        announcement.reject(new Error(err));
-      } else {
-        console.log('Speech completed successfully');
-        announcement.resolve();
-      }
-      
-      setTimeout(() => this.processQueue(), 100);
-    });
-  }
-  
-  async stop(): Promise<void> {
-    return new Promise((resolve) => {
-      // Clear the queue
-      this.queue.forEach(announcement => {
-        announcement.reject(new Error('Speech stopped'));
+    console.log(`Speaking (priority ${announcement.priority}): "${announcement.text}" with voice: ${voiceToUse}, speed: ${speedToUse}`);
+
+    try {
+      // Note: say.stop() does not work reliably on Windows SAPI
+      // Messages will play in sequence without interruption
+      await new Promise<void>((resolve, reject) => {
+        say.speak(announcement.text, voiceToUse, speedToUse, (err?: string) => {
+          if (err) {
+            reject(new Error(err));
+          } else {
+            resolve();
+          }
+        });
       });
-      this.queue = [];
-      
-      if (this.isSpeaking) {
-        say.stop();
-        this.isSpeaking = false;
-      }
-      resolve();
-    });
+
+      console.log('Speech completed successfully');
+    } catch (err) {
+      console.error('TTS Error:', err);
+    } finally {
+      this.isSpeaking = false;
+      // Process next message in queue
+      this.processQueue();
+    }
   }
-  
+
   async getAvailableVoices(): Promise<string[]> {
     return new Promise((resolve) => {
       say.getInstalledVoices((err?: string, voices?: string[]) => {
@@ -116,27 +113,30 @@ export class TTSService {
     this.defaultSpeed = speed;
   }
 
-  setDefaultVolume(volume: number): void {
-    this.defaultVolume = volume;
-    console.log(`Volume set to ${volume}% (note: not supported by say library)`);
-  }
-
   setMaxQueueSize(size: number): void {
     this.maxQueueSize = size;
+    // If new size is smaller than current queue, trim to fit
+    if (this.queue.size() > size) {
+      const queueArray = this.queue.toArray();
+      // Keep only the highest priority messages
+      queueArray.sort((a, b) => b.priority - a.priority);
+      this.queue = new Heap<Message>((a: Message, b: Message) => b.priority - a.priority);
+      for (let i = 0; i < size && i < queueArray.length; i++) {
+        this.queue.push(queueArray[i]);
+      }
+      console.log(`Queue trimmed from ${queueArray.length} to ${size} messages`);
+    }
+  }
+
+  getQueueLength(): number {
+    return this.queue.size();
   }
 
   isSpeechActive(): boolean {
     return this.isSpeaking;
   }
-  
-  getQueueLength(): number {
-    return this.queue.length;
-  }
-  
+
   clearQueue(): void {
-    this.queue.forEach(announcement => {
-      announcement.reject(new Error('Queue cleared'));
-    });
-    this.queue = [];
+    this.queue.clear();
   }
 }

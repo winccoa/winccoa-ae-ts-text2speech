@@ -1,28 +1,10 @@
-import { TTSService } from './services/ttsService';
-
-interface Alarm {
-  id: number;
-  message: string;
-  severity: number;
-  timestamp: Date;
-}
+import { TTSService, Message } from './services/ttsService';
+import { WinccoaManager } from 'winccoa-manager';
 
 interface TTSConfig {
-  enabled: boolean;
   voice: string;
   speed: number;
-  volume: number;
   maxQueueSize: number;
-  announceTypes: {
-    alarms: boolean;
-    status: boolean;
-    init: boolean;
-  };
-  severityFilter: {
-    critical: boolean;
-    warning: boolean;
-    info: boolean;
-  };
   language: string;
   availableVoices: string[];
   isInitialized: boolean;
@@ -32,24 +14,11 @@ export class WinCCOATTSIntegration {
   private tts: TTSService;
   private config: TTSConfig;
   
-  constructor() {
-    // Default configuration
+  constructor(winccoa: WinccoaManager) {
     this.config = {
-      enabled: true,
       voice: '',
       speed: 1.0,
-      volume: 100,
       maxQueueSize: 5,
-      announceTypes: {
-        alarms: true,
-        status: true,
-        init: true
-      },
-      severityFilter: {
-        critical: true,
-        warning: true,
-        info: false
-      },
       language: 'en-US',
       availableVoices: [],
       isInitialized: false
@@ -89,11 +58,9 @@ export class WinCCOATTSIntegration {
     try {
       const newConfig: Partial<TTSConfig> = JSON.parse(configJson);
       
-      // Don't allow overriding of availableVoices and isInitialized from external config
       delete newConfig.availableVoices;
       delete newConfig.isInitialized;
       
-      // Validate configuration
       if (this.validateConfig(newConfig)) {
         this.config = { ...this.config, ...newConfig };
         this.applyConfiguration();
@@ -115,49 +82,27 @@ export class WinCCOATTSIntegration {
     if (this.config.speed) {
       this.tts.setDefaultSpeed(this.config.speed);
     }
-    
-    // Apply volume setting
-    if (this.config.volume !== undefined) {
-      this.tts.setDefaultVolume(this.config.volume);
-    }
-    
-    // Apply max queue size
+
+    // Apply max queue size - this will automatically trim the queue if needed
     if (this.config.maxQueueSize !== undefined) {
       this.tts.setMaxQueueSize(this.config.maxQueueSize);
     }
-    
-    // Clear queue if max size changed and current queue exceeds new limit
-    if (this.tts.getQueueLength() > this.config.maxQueueSize) {
-      this.tts.clearQueue();
-    }
-    
-    // Language could be used for voice selection filtering
-    if (this.config.language) {
-      this.applyLanguageFilter();
-    }
   }
   
-  private applyLanguageFilter(): void {
-    // Filter available voices based on language preference
-    // This is a simple implementation - could be enhanced
-    const filteredVoices = this.config.availableVoices.filter(voice => {
-      if (this.config.language.startsWith('en')) {
-        return voice.toLowerCase().includes('english') || 
-               voice.toLowerCase().includes('zira') || 
-               voice.toLowerCase().includes('david');
-      }
-      // Add more language filters as needed
-      return true;
-    });
+  public async addAnnouncement(message: Message): Promise<void> {
+    if (!this.config.isInitialized) {
+      console.warn('TTS Integration not initialized yet, cannot add announcement');
+      return;
+    }
     
-    // If no voice matches language, keep all voices available
-    if (filteredVoices.length === 0) {
-      console.log('No voices found for language:', this.config.language);
-    } else {
-      console.log(`Filtered voices for ${this.config.language}:`, filteredVoices);
+    try {
+      this.tts.add(message);
+      console.log('Announcement added to TTS queue:', message);
+    } catch (error) {
+      console.error('Error adding announcement to TTS queue:', error);
     }
   }
-  
+
   private validateConfig(config: Partial<TTSConfig>): boolean {
     // Validate speed range
     if (config.speed !== undefined && (config.speed < 0.1 || config.speed > 3.0)) {
@@ -165,14 +110,8 @@ export class WinCCOATTSIntegration {
       return false;
     }
     
-    // Validate volume range
-    if (config.volume !== undefined && (config.volume < 0 || config.volume > 100)) {
-      console.error('Invalid volume range:', config.volume);
-      return false;
-    }
-    
-    // Validate max queue size
-    if (config.maxQueueSize !== undefined && (config.maxQueueSize < 1 || config.maxQueueSize > 50)) {
+    // Validate max queue size (0 is allowed temporarily for clearing queue)
+    if (config.maxQueueSize !== undefined && (config.maxQueueSize < 0 || config.maxQueueSize > 50)) {
       console.error('Invalid max queue size:', config.maxQueueSize);
       return false;
     }
@@ -204,83 +143,14 @@ export class WinCCOATTSIntegration {
     return this.config.isInitialized;
   }
   
-  // Method to be called from WinCC OA when an alarm occurs
-  async announceAlarm(alarm: Alarm): Promise<void> {
-    if (!this.config.enabled || !this.config.announceTypes.alarms) {
-      return;
-    }
-    
-    // Check severity filter
-    const shouldAnnounce = (
-      (alarm.severity === 1 && this.config.severityFilter.critical) ||
-      (alarm.severity === 2 && this.config.severityFilter.warning) ||
-      (alarm.severity >= 3 && this.config.severityFilter.info)
-    );
-    
-    if (!shouldAnnounce) {
-      return;
-    }
-    
-    // Format the message based on severity
-    let prefix = '';
-    switch (alarm.severity) {
-      case 1: prefix = "Critical alert: "; break;
-      case 2: prefix = "Warning: "; break;
-      default: prefix = "Information: ";
-    }
-    
-    try {
-      // Use urgent speak for critical alarms
-      if (alarm.severity === 1 && 'speakUrgent' in this.tts) {
-        await (this.tts as any).speakUrgent(prefix + alarm.message);
-      } else {
-        await this.tts.speak(prefix + alarm.message, this.config.voice, this.config.speed, this.config.volume);
-      }
-    } catch (error) {
-      console.error('Failed to announce alarm:', error);
-    }
-  }
-  
-  // Announce system status
-  async announceStatus(status: string): Promise<void> {
-    if (!this.config.enabled || !this.config.announceTypes.status) {
-      return;
-    }
-    
-    try {
-      await this.tts.speak(`System status update: ${status}`, this.config.voice, this.config.speed, this.config.volume);
-    } catch (error) {
-      console.error('Failed to announce status:', error);
-    }
-  }
-
-  // Announce Init State
-  async announceInit(message: string): Promise<void> {
-    if (!this.config.enabled || !this.config.announceTypes.init) {
-      return;
-    }
-    
-    try {
-      await this.tts.speak(`System initial state: ${message}`, this.config.voice, this.config.speed, this.config.volume);
-    } catch (error) {
-      console.error('Failed to announce init message:', error);
-    }
-  }
-  
-  // Stop any current announcement
-  async stopAnnouncement(): Promise<void> {
-    await this.tts.stop();
-  }
-  
   // Clear the announcement queue
   clearQueue(): void {
     this.tts.clearQueue();
   }
   
   // Get TTS status for monitoring
-  getStatus(): { enabled: boolean; speaking: boolean; queueLength: number } {
+  getStatus(): { speaking: boolean; queueLength: number } {
     return {
-      enabled: this.config.enabled,
       speaking: this.tts.isSpeechActive(),
       queueLength: this.tts.getQueueLength()
     };

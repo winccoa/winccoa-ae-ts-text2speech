@@ -2,12 +2,16 @@ import {
   WinccoaManager,
   WinccoaConnectUpdateType,
   WinccoaError,
+  WinccoaCtrlScript,
 } from 'winccoa-manager';
 import { WinCCOATTSIntegration } from './lib/ttsIntegration';
+import { Message } from './lib/services/ttsService';
 
 const winccoa = new WinccoaManager();
-const ttsIntegration = new WinCCOATTSIntegration();
-
+const ttsIntegration = new WinCCOATTSIntegration(winccoa);
+let filteredDps: string[] = [];
+let dpName = 'TTS_engine_0';
+let manNumber = 0;
 // Callback for TTS configuration updates
 function configConnectCB(
   names: string[],
@@ -32,22 +36,15 @@ function valueConnectCB(
   error?: WinccoaError
 ) {
   if (error) {
-    console.log('Value connection error:', error);
+    console.error('Value connection error:', error);
     return;
   }
 
-  console.warn('--- Value Datapoints update ---');
-
   for (let i = 0; i < names.length; i++) {
-    console.info(`Value [${i}] '${names[i]}' : ${values[i]}`);
-    
-    // Only announce if TTS is ready
     if (ttsIntegration.isReady()) {
-      const message = `Datapoint ${names[i]} changed to ${values[i]}`;
-      if (type == WinccoaConnectUpdateType.Answer) {
-        ttsIntegration.announceInit(message);
-      } else {
-        ttsIntegration.announceStatus(message);
+      const message = JSON.parse(String(values[i])) as Message;
+      if (message.dpe && filteredDps.includes(message.dpe) || message.managerNumber === manNumber || message.managerNumber === 0) {
+        ttsIntegration.addAnnouncement(message)
       }
     }
   }
@@ -55,7 +52,7 @@ function valueConnectCB(
 
 async function main() {
   console.log("WinCC OA Text-to-Speech Service Starting...");
-  
+
   // Wait for TTS integration to be fully initialized
   const waitForInitialization = () => {
     return new Promise<void>((resolve) => {
@@ -74,16 +71,28 @@ async function main() {
 
   // Wait for initialization
   await waitForInitialization();
-  
-  // Announce startup
-  await ttsIntegration.announceStatus("Text to Speech service started");
-  
+
+  const script = new WinccoaCtrlScript(
+    winccoa,
+    `int main()
+     {
+        char manType, manNum;
+        int manID = myManId();
+        getManIdFromInt(manID, manType, manNum);
+        return (int)manNum;
+     }`,
+    'example script'
+  );
+  manNumber = await script.start() as number;
+  console.log(`Manager Number determined: ${manNumber}`);
+  dpName = `TTS_engine_${manNumber}`;
+
   // Publish current configuration to WinCC OA
   const currentConfig = ttsIntegration.getCurrentConfiguration();
   console.log('Publishing initial TTS Configuration to WinCC OA:', currentConfig);
-  
+
   try {
-    await winccoa.dpSetWait(['TTS_engine_config.'], [currentConfig]);
+    await winccoa.dpSetWait([`${dpName}.config`], [currentConfig]);
     console.log('Successfully published initial TTS configuration to WinCC OA');
   } catch (error) {
     console.error('Failed to publish initial TTS configuration:', error);
@@ -91,19 +100,59 @@ async function main() {
 
   // Now connect to datapoints after initialization is complete
   console.log("Connecting to WinCC OA datapoints...");
-  
+  winccoa.dpConnect(updateFilterCB, [
+    `${dpName}.filter`
+  ], true);
+
   // Connect to TTS configuration datapoint
   winccoa.dpConnect(configConnectCB, [
-    'TTS_engine_config.'  // Configuration datapoint
+    `${dpName}.config`
   ], false);
-  
+
   // Connect to value datapoints that should trigger TTS announcements
   winccoa.dpConnect(valueConnectCB, [
-    'ExampleDP_Arg1.',
-    'ExampleDP_Arg2.'
-  ], true);
-  
+    `Text2SpeechMsg.message`,
+  ], false);
+
   console.log("WinCC OA Text-to-Speech Service fully started and connected");
 }
 
 main().catch(console.error);
+
+function updateFilterCB(names: string[],
+  values: unknown[],
+  type: WinccoaConnectUpdateType,
+  error?: WinccoaError) {
+  const filter = values[0] as string;
+  const filterFn = createFilterFunction(filter);
+  filteredDps = winccoa.dpNames('*.**', "").filter(filterFn);
+  winccoa.dpSetWait(`${dpName}.dpes`, filteredDps);
+}
+
+let lastValidFilterFn: (name: string) => boolean = () => true;
+
+function createFilterFunction(userCondition: string): (name: string) => boolean {
+  const trimmed = userCondition.trim();
+
+  // Return previous filter if the condition is empty
+  if (!trimmed) {
+    return lastValidFilterFn;
+  }
+
+  try {
+    let fn: (name: string) => boolean;
+    if (/\breturn\b/.test(trimmed)) {
+      fn = new Function('name', trimmed) as (name: string) => boolean;
+    } else {
+      fn = new Function('name', `return (${trimmed});`) as (name: string) => boolean;
+    }
+
+    // Test the function with a sample value to catch runtime errors early
+    fn('test');
+    lastValidFilterFn = fn;
+    return fn;
+  } catch (error) {
+    console.error(`Invalid filter expression: "${userCondition}". Error: ${error}. Keeping previous filter.`);
+    return lastValidFilterFn;
+  }
+}
