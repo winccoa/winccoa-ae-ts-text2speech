@@ -1,0 +1,22 @@
+{
+  "RepoName": "WinCC OA Text-To-Speech",
+  "Keywords": [
+    "ctrl",
+    "text-to-speech",
+    "audio",
+    "notifications",
+    "alarm",
+    "automation"
+  ],
+  "Version": "1.0.0",
+  "Description": "Adds real-time voice notifications to WinCC OA by converting alarms, messages, and system events into spoken announcements. This improves operator awareness and reaction time by providing audible alerts alongside traditional visual monitoring.",
+  "OaVersions": "^3.20.0",
+  "Subprojects": [
+    {
+      "Name": "WCCOAT2S_App_Example.zip",
+      "Description": "Library and application example enabling text-to-speech functionality within WinCC OA projects.",
+      "Managers": "text-2-speech/dist/index.js",
+      "Dplists": "texttospeech.dpl"
+    }
+  ]
+}
