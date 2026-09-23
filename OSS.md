@@ -28,8 +28,32 @@ Please note the following license conditions and copyright notices applicable to
 
 | Component | Open Source Software [Yes/No] | Acknowledgements/Comment | License conditions and copyright notices |
 |-----------|------------------------------|-------------------------|----------------------------------------|
-| cppcheck - 1.87 | Yes | | [LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT cppcheck - 1.87](#compDetail_171492) |
-| lizard - 1.14.7 | Yes | | [LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT lizard - 1.14.7](#compDetail_171493) |
-| picojson - 1.3.0 | Yes | | [LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT picojson - 1.3.0](#compDetail_171490) |
-| simplecpp - master d4bc1834ec5c2dc3f0143657275252aeaecc8436 | Yes | | [LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT simplecpp - master d4bc1834ec5c2dc3f0143657275252aeaecc8436](#compDetail_171491) |
-| TinyXML2 - 6.2.0 | Yes | | [LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT TinyXML2 - 6.2.0](#compDetail_26412) |
+| heap-js - 2.7.1 | Yes | Runtime dependency | [BSD 3-Clause](#heap-js-271) |
+
+### heap-js 2.7.1
+
+BSD 3-Clause License
+
+Copyright (c) 2017, Ignacio Lago
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## External runtime prerequisites
+
+The application example does not contain or redistribute the following operating-system components:
+
+| Component | Platform | Usage |
+|-----------|----------|-------|
+| Microsoft System.Speech | Windows | Speech synthesis using installed Windows voices |
+| eSpeak NG | Linux | Speech synthesis using a separately installed `espeak-ng` executable |
+
+eSpeak NG is licensed under GPL-3.0-or-later. Install it separately through the Linux distribution's package manager. Its license and source availability are provided by the selected distribution/package supplier.
+
+For CVE-2023-49990 through CVE-2023-49994, use at least Debian 11 `1.50+dfsg-7+deb11u2`, Debian 12 `1.51+dfsg-10+deb12u1`, Ubuntu 20.04 LTS `1.50+dfsg-6ubuntu0.1`, or Ubuntu 22.04 LTS `1.50+dfsg-10ubuntu0.1`. Ubuntu 24.04 LTS is listed as not affected by Ubuntu USN-6858-1. Windows and Linux operating-system components must receive the vendor's current security updates.
