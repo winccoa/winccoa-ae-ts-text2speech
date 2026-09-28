@@ -45,6 +45,15 @@ This improves operator awareness and reduces reaction time in mission-critical s
 
 For detailed instructions on usage and integration, please refer to the datasheet available in the Downloads section with the name: **"WinCCOAtextToSpeechExample.pdf"**.
 
+## Runtime Requirements
+
+- Windows uses the operating system's `System.Speech` voices through Windows PowerShell 5.1 and requires a supported, fully patched Windows installation.
+- Linux requires a supported, fully patched distribution with `espeak-ng` installed and available on `PATH`. For example, use `sudo apt install espeak-ng` on Debian or Ubuntu.
+- The application example does not include or redistribute Windows voices or eSpeak NG.
+- Voice names are platform-specific. Select a voice returned by the configuration panel on the target system.
+
+For CVE-2023-49990 through CVE-2023-49994, use at least Debian 11 `1.50+dfsg-7+deb11u2`, Debian 12 `1.51+dfsg-10+deb12u1`, Ubuntu 20.04 LTS `1.50+dfsg-6ubuntu0.1`, or Ubuntu 22.04 LTS `1.50+dfsg-10ubuntu0.1`. Ubuntu 24.04 LTS is listed as not affected by Ubuntu USN-6858-1. Keep all operating-system packages updated through the distribution's security update mechanism.
+
 ## Conclusion
 
 The WinCC OA Text-to-Speech Application Example enhances traditional SCADA monitoring with audible intelligence. By transforming system messages into spoken alerts, operators gain a new layer of awareness that improves response time, safety, and usability.
